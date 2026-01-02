@@ -23,43 +23,67 @@ class DatabaseSeeder extends Seeder
         //     'email' => 'test@example.com',
         // ]);
 
-        User::create([
-            'name'      => 'Dwi Purnomo',
-            'email'     => 'purnomodwi174@gmail.com',
-            'password'  => bcrypt('1234'),
-            'roles'     => 'sekretaris'
-        ]);
+        User::firstOrCreate(
+            ['email' => 'purnomodwi174@gmail.com'],
+            [
+                'name' => 'Dwi Purnomo',
+                'password' => bcrypt('1234'),
+                'roles' => 'sekretaris'
+            ]
+        );
 
-        User::create([
-            'name'      => 'Galang Adi Trianto',
-            'email'     => 'wartabolanet@gmail.com',
-            'password'  => bcrypt('1234'),
-            'roles'     => 'kepalausaha'
-        ]);
+        User::firstOrCreate(
+            ['email' => 'wartabolanet@gmail.com'],
+            [
+                'name' => 'Galang Adi Trianto',
+                'password' => bcrypt('1234'),
+                'roles' => 'kepalausaha'
+            ]
+        );
 
-        User::create([
-            'name'      => 'Mujiyono',
-            'email'     => 'mujiyono@gmail.com',
-            'password'  => bcrypt('1234'),
-            'roles'     => 'direktur'
-        ]);
+        User::firstOrCreate(
+            ['email' => 'mujiyono@gmail.com'],
+            [
+                'name' => 'Mujiyono',
+                'password' => bcrypt('1234'),
+                'roles' => 'direktur'
+            ]
+        );
 
         Kategori::create([
-            'nama'      => 'Elektronik',
+            'nama' => 'Elektronik',
             'deskripsi' => 'Deskripsi dari kategori elektronik',
-            'user_id'   => 1
+            'user_id' => 1
         ]);
 
         Lokasi::create([
-            'nama_lokasi'   => 'Unit Usaha Perdagangan',
-            'deskripsi'     => 'Unit Usaha Perdagangan',
-            'user_id'       => 1
+            'nama_lokasi' => 'Unit Usaha Perdagangan',
+            'deskripsi' => 'Unit Usaha Perdagangan',
+            'user_id' => 1
         ]);
-        
+
         Satuan::create([
-            'nama'      => 'Unit',
+            'nama' => 'Unit',
             'deskripsi' => 'Deskripsi dari satuan unit',
-            'user_id'   => 1
+            'user_id' => 1
         ]);
+        // Create 50 records for each independent model
+        $kategoris = Kategori::factory(50)->create();
+        $lokasis = Lokasi::factory(50)->create();
+        $satuans = Satuan::factory(50)->create();
+
+        // Create 50 Barangs with random relationships
+        \App\Models\Barang::factory(50)->make()->each(function ($barang) use ($kategoris, $lokasis, $satuans) {
+            $barang->kategori_id = $kategoris->random()->id;
+            $barang->lokasi_id = $lokasis->random()->id;
+            $barang->satuan_id = $satuans->random()->id;
+            $barang->save();
+        });
+
+        // Create 50 Pengadaans with random relationships
+        \App\Models\Pengadaan::factory(50)->make()->each(function ($pengadaan) use ($lokasis) {
+            $pengadaan->lokasi_id = $lokasis->random()->id;
+            $pengadaan->save();
+        });
     }
 }
