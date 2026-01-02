@@ -1,5 +1,7 @@
 version: "3.7"
+
 services:
+  # 1. Aplikasi Utama (Laravel PHP-FPM)
   app:
     build:
       args:
@@ -9,17 +11,20 @@ services:
       dockerfile: Dockerfile
     image: bumdes-app
     container_name: bumdes-app
-    restart: unless-stopped
+    restart: always # Penting: Agar container hidup lagi kalau VPS restart
     working_dir: /var/www
     volumes:
       - ./:/var/www
     networks:
-      - laravel
+      - bumdes-network
+    depends_on:
+      - db # Memastikan database jalan dulu sebelum aplikasi
 
+  # 2. Database (MySQL)
   db:
     image: mysql:8.0
     container_name: bumdes-db
-    restart: unless-stopped
+    restart: always
     environment:
       MYSQL_DATABASE: ${DB_DATABASE}
       MYSQL_ROOT_PASSWORD: ${DB_PASSWORD}
@@ -28,22 +33,26 @@ services:
       SERVICE_TAGS: dev
       SERVICE_NAME: mysql
     volumes:
+      # Menggunakan volume folder agar data tidak hilang saat container dihapus
       - ./docker-compose/mysql:/var/lib/mysql
     networks:
-      - laravel
+      - bumdes-network
 
+  # 3. Web Server (Nginx)
   nginx:
     image: nginx:alpine
     container_name: bumdes-nginx
-    restart: unless-stopped
+    restart: always
     ports:
-      - 80:80
+      - "80:80"
     volumes:
       - ./:/var/www
       - ./docker/nginx/conf.d:/etc/nginx/conf.d
     networks:
-      - laravel
+      - bumdes-network
+    depends_on:
+      - app # Nginx baru jalan kalau PHP App sudah siap
 
 networks:
-  laravel:
+  bumdes-network:
     driver: bridge
