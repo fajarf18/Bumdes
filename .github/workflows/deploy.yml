@@ -1,25 +1,17 @@
-name: Deploy to Nevacloud VPS
+name: Deploy Bumdes ke VPS
 
 on:
   push:
-    branches: [ "main" ] # Sesuaikan dengan branch utama Anda (master/main)
+    branches: [ "main" ]
 
 jobs:
   deploy:
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout code
+      - name: Checkout Code
         uses: actions/checkout@v4
 
-      - name: Setup SSH
-        uses: webfactory/ssh-agent@v0.9.0
-        with:
-          ssh-private-key: ${{ secrets.SSH_PRIVATE_KEY }}
-
-      - name: Add Known Hosts
-        run: ssh-keyscan -H ${{ secrets.SSH_HOST }} >> ~/.ssh/known_hosts
-
-      - name: Deploy to VPS
+      - name: Deploy via SSH
         uses: appleboy/ssh-action@master
         with:
           host: ${{ secrets.SSH_HOST }}
@@ -27,24 +19,31 @@ jobs:
           key: ${{ secrets.SSH_PRIVATE_KEY }}
           port: 22
           script: |
-            # Masuk ke folder project (ganti sesuai folder di VPS nanti)
+            # 1. Masuk ke folder project
             cd /var/www/bumdes
             
-            # Pull update terbaru
-            git pull origin main
+            # 2. Atasi masalah permission Git (Dubious Ownership)
+            git config --global --add safe.directory /var/www/bumdes
             
-            # Setup Environment jika belum ada
-            if [ ! -f .env ]; then
-              cp .env.example .env
-            fi
+            # 3. Tarik kodingan terbaru dari GitHub
+            git fetch --all
+            git reset --hard origin/main
             
-            # Rebuild container dengan Docker Compose
-            # Menggunakan file docker-compose.yml yang ada di repo
-            docker compose down
+            # 4. Pastikan permission folder storage aman
+            # Kita set owner ke 1000 (user docker) agar bisa tulis file
+            chown -R 1000:1000 .
+            chmod -R 775 storage bootstrap/cache
+            
+            # 5. Rebuild Container (Jika ada perubahan config/dockerfile)
             docker compose up -d --build
             
-            # Jalankan command Laravel (opsional tapi disarankan)
+            # 6. Install Dependencies & Maintenance Database
+            # Gunakan flag -T agar tidak error "TTY input is not interactive"
+            docker compose exec -T app composer install --optimize-autoloader --no-dev
             docker compose exec -T app php artisan migrate --force
+            
+            # 7. Bersihkan Cache (PENTING untuk Production)
             docker compose exec -T app php artisan optimize:clear
             docker compose exec -T app php artisan config:cache
+            docker compose exec -T app php artisan route:cache
             docker compose exec -T app php artisan view:cache
