@@ -1,5 +1,3 @@
-version: "3.7"
-
 services:
   # 1. Aplikasi Utama (Laravel PHP-FPM)
   app:
@@ -43,9 +41,11 @@ services:
     restart: always
     ports:
       - "80:80"
+      - "443:443"
     volumes:
       - ./:/var/www
       - ./docker/nginx/conf.d:/etc/nginx/conf.d
+      - /etc/letsencrypt:/etc/letsencrypt
     networks:
       - bumdes-network
     depends_on:
